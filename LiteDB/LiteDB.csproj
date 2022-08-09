@@ -1,7 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net45;netstandard1.3;netstandard2.0</TargetFrameworks>
+    <TargetFrameworks>net6.0</TargetFrameworks>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>enable</Nullable>
     <AssemblyVersion>5.0.12</AssemblyVersion>
     <FileVersion>5.0.12</FileVersion>
     <VersionPrefix>5.0.12</VersionPrefix>

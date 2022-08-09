@@ -1,7 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-     <TargetFrameworks>netcoreapp3.1</TargetFrameworks>
+    <TargetFrameworks>net6.0</TargetFrameworks>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>enable</Nullable>
     <AssemblyName>LiteDB.Shell</AssemblyName>
     <PackageId>LiteDB.Shell</PackageId>
     <OutputType>Exe</OutputType>
