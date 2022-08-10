@@ -2,9 +2,17 @@ syntax = "proto3";
 
 package litedbserver.v1;
 
+import "google/protobuf/any.proto";
+
 option csharp_namespace = "LiteDB.Server.Base.Protos";
 
-message Command {}
+message Command {
+  string path = 1;
+  CommandOperation operation = 2;
+  optional google.protobuf.Any data = 3;
+}
+
+message CommandResult {}
 
 enum CommandOperation {
   COMMAND_OPERATION_UNSPECIFIED = 0;
