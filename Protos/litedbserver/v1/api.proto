@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package litedbserver.v1;
+
+option csharp_namespace = "LiteDB.Server.Base.Protos";
+
+message Command {}
+
+enum CommandOperation {
+  COMMAND_OPERATION_UNSPECIFIED = 0;
+  COMMAND_OPERATION_READ = 1;
+  COMMAND_OPERATION_WRITE = 2;
+  COMMAND_OPERATION_CREATE = 3;
+  COMMAND_OPERATION_UPDATE = 4;
+}

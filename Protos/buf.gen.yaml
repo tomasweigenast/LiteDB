@@ -1,0 +1,5 @@
+version: v1
+plugins:
+  - name: csharp
+    out: ../LiteDB.Server/Base/Protos
+    opt: base_namespace=LiteDB.Server.Base.Protos,file_extension=.g.cs

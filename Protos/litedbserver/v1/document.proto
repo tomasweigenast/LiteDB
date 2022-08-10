@@ -1,0 +1,61 @@
+syntax = "proto3";
+
+package litedbserver.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option csharp_namespace = "LiteDB.Server.Base.Protos";
+
+message Document {
+  map<string, Value> fields = 1;
+}
+
+message Value {
+  ValueType value_type = 1;
+  oneof value {
+    NullValue null_value = 2;
+    int32 int32_value = 3;
+    int64 int64_value = 4;
+    uint32 uint32_value = 5;
+    uint64 uint64_value = 6;
+    float float32_value = 7;
+    double float64_value = 8;
+    bytes binary_value = 9;
+    bool boolean_value = 10;
+    ListValue list_value = 11;
+    MapValue map_value = 12;
+    google.protobuf.Timestamp timestamp_value = 13;
+    string string_value = 14;
+  }
+}
+
+message ListValue {
+  repeated Value values = 1;
+}
+
+message MapValue {
+  map<string, Value> values = 1;
+}
+
+// buf:lint:ignore ENUM_ZERO_VALUE_SUFFIX
+// buf:lint:ignore ENUM_VALUE_PREFIX
+enum NullValue {
+  NULL_VALUE = 0;
+}
+
+enum ValueType {
+  VALUE_TYPE_UNSPECIFIED = 0;
+  VALUE_TYPE_NULL = 1;
+  VALUE_TYPE_INT32 = 2;
+  VALUE_TYPE_INT64 = 3;
+  VALUE_TYPE_UINT32 = 4;
+  VALUE_TYPE_UINT64 = 5;
+  VALUE_TYPE_FLOAT32 = 6;
+  VALUE_TYPE_FLOAT64 = 7;
+  VALUE_TYPE_BINARY = 8;
+  VALUE_TYPE_BOOLEAN = 9;
+  VALUE_TYPE_LIST = 10;
+  VALUE_TYPE_MAP = 11;
+  VALUE_TYPE_TIMESTAMP = 12;
+  VALUE_TYPE_STRING = 13;
+}
