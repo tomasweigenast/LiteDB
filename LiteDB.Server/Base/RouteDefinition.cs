@@ -1,4 +1,5 @@
-﻿using System.Text.RegularExpressions;
+﻿using LiteDB.Server.Base.Protos;
+using System.Text.RegularExpressions;
 
 namespace LiteDB.Server.Base
 {
@@ -64,7 +65,7 @@ namespace LiteDB.Server.Base
                 inputValues.Add(variable, value);
             }
 
-            return new RouteParseResult(inputValues, command);
+            return new RouteParseResult(inputValues, Operation.Parse(command));
         }
         
         #region Private Helper Methods
@@ -86,17 +87,21 @@ namespace LiteDB.Server.Base
         public static implicit operator RouteDefinition(string route) => new(route);
 
         public override string ToString() => RouteFormat;
+
+        public override int GetHashCode() => RouteFormat.GetHashCode();
+
+        public override bool Equals(object? obj) => RouteFormat.Equals(obj);
     }
 
     public class RouteParseResult
     {
         public Dictionary<string, string> Parameters { get; }
 
-        public string Command { get; }
+        public Operation Operation { get; }
 
-        public RouteParseResult(Dictionary<string, string> parameters, string command)
+        public RouteParseResult(Dictionary<string, string> parameters, Operation operation)
         {
-            Command = command;
+            Operation = operation;
             Parameters = parameters;
         }
     }

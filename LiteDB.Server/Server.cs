@@ -1,4 +1,5 @@
-﻿using LiteDB.Server.Base;
+﻿using Google.Protobuf;
+using LiteDB.Server.Base;
 using LiteDB.Server.Base.Protos;
 using LiteDB.Server.Logging;
 using System.Collections.Concurrent;
@@ -6,8 +7,6 @@ using System.Net;
 using System.Net.Sockets;
 using System.Reflection;
 using WellKnown = Google.Protobuf.WellKnownTypes;
-using System;
-using Google.Protobuf;
 
 namespace LiteDB.Server
 {
@@ -30,18 +29,24 @@ namespace LiteDB.Server
 
         private readonly TcpListener m_Listener;
         private readonly ConcurrentDictionary<string, Client> m_Clients;
-        private readonly ConcurrentDictionary<string, PathHandler> m_PathHandlers;
+        private readonly ConcurrentDictionary<RouteDefinition, Dictionary<Operation, HandlerExecutor>> m_PathHandlers;
 
         private Task? _startTask;
         private CancellationTokenSource? m_ListenerCancellationTokenSource;
         private bool m_IsRunning;
 
-        public Server(int port, List<PathHandler> handlers)
+        public Server(int port, List<PathHandlerBuilder> handlers)
         {
             m_Listener = new TcpListener(IPAddress.Parse("127.0.0.1"), port);
-            m_Clients = new ConcurrentDictionary<string, Client>();
-            m_PathHandlers = new ConcurrentDictionary<string, PathHandler>(handlers
-                .Select(x => KeyValuePair.Create(x.Path.ToString(), x)));
+            m_Clients = new();
+            m_PathHandlers = new();
+
+            foreach(var handlerBuilder in handlers)
+            {
+                m_PathHandlers[handlerBuilder.Route] = handlerBuilder.Handlers
+                    .Select(x => KeyValuePair.Create(x.Key, new HandlerExecutor(x.Value)))
+                    .ToDictionary(k => k.Key, v => v.Value); 
+            }
         }
 
         #region Methods
@@ -109,16 +114,16 @@ namespace LiteDB.Server
         private async void OnDataReady(Client client, byte[] buffer)
         {
             var cmd = Command.Parser.ParseFrom(buffer);
-            PathHandler? pathHandler = null;
+            HandlerExecutor? handlerExecutor = null;
             CommandContext? context = null;
 
-            foreach(var handler in m_PathHandlers.Values)
+            foreach(var handlerEntry in m_PathHandlers)
             {
-                var result = handler.Path.ParseRouteInstance(cmd.Path);
+                var result = handlerEntry.Key.ParseRouteInstance(cmd.Path);
                 if (result == null)
                     continue;
 
-                pathHandler = handler;
+                handlerExecutor = result.Command;
                 context = new CommandContext(cmd, result.Command, result.Parameters.ToDictionary(x => x.Key, x => x.Value));
                 Logger.Log($"Handler found for path {cmd.Path}. Parameters: [{string.Join(",", result.Parameters.Select(b => $"{b.Key}: ${b.Value}"))}]");
             }

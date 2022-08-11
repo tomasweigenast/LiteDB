@@ -10,15 +10,13 @@ namespace LiteDB.Server
         {
             var server = new Server(9999, new List<PathHandler>
             {
-                new PathHandler("collections/{collectionName}", new CreateCollectionHandler())
+                new PathHandler("collections/{collectionName}", new Dictionary<Operation, ICommandHandler>
+                {
+                    { Operation.Create, new CreateCollectionHandler() }
+                })
             });
 
             server.Run().Wait();
-        }
-
-        public static CommandResult TestResult(CommandContext context)
-        {
-            return new();
         }
     }
 }
