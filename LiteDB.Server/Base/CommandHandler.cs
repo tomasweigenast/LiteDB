@@ -2,10 +2,12 @@
 
 namespace LiteDB.Server.Base
 {
+    public interface ICommandHandler { }
+
     /// <summary>
     /// The handler of a command operation
     /// </summary>
-    internal class CommandHandler
+    public class CommandHandler : ICommandHandler
     {
         private readonly Func<CommandContext, CommandResult> m_Handler;
 
@@ -19,11 +21,11 @@ namespace LiteDB.Server.Base
     /// The handler of a command operation which handles data too
     /// </summary>
     /// <typeparam name="TData">The type of data the handler handles.</typeparam>
-    internal class CommandHandler<TData> : CommandHandler
+    public class CommandHandler<TData> : ICommandHandler
     {
         private readonly Func<CommandContext, TData, CommandResult> m_Handler;
 
-        public CommandHandler(Func<CommandContext, TData, CommandResult> handler) : base(handler)
+        public CommandHandler(Func<CommandContext, TData, CommandResult> handler)
         {
             m_Handler = handler;
         }

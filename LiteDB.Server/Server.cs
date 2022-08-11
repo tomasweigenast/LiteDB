@@ -1,4 +1,5 @@
-﻿using System.Collections.Concurrent;
+﻿using LiteDB.Server.Base;
+using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
 
@@ -8,15 +9,17 @@ namespace LiteDB.Server
     {
         private readonly TcpListener m_Listener;
         private readonly ConcurrentDictionary<string, TcpClient> m_Clients;
+        private readonly ConcurrentDictionary<string, PathHandler> m_PathHandlers;
 
         private Task? _startTask;
         private CancellationTokenSource? m_ListenerCancellationTokenSource;
         private bool m_IsRunning;
 
-        public Server(int port)
+        public Server(int port, List<PathHandler> handlers)
         {
             m_Listener = new TcpListener(IPAddress.Parse("127.0.0.1"), port);
             m_Clients = new ConcurrentDictionary<string, TcpClient>();
+            m_PathHandlers = new ConcurrentDictionary<string, PathHandler>(handlers.Select(x => KeyValuePair.Create(x.Path, x)));
         }
 
         /// <summary>

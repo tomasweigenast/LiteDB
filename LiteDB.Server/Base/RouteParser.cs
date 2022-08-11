@@ -2,7 +2,7 @@
 
 namespace LiteDB.Server.Base
 {
-    internal class RouteParser
+    public class RouteParser
     {
         private const string RouteTokenPattern = @"[{0}].+?[{1}]"; //the 0 and 1 are used by the string.format function, they are the start and end characters.
         private const string VariableTokenPattern = "(?<{0}>[^,]*)"; //the <>'s denote the group name; this is used for reference for the variables later.
