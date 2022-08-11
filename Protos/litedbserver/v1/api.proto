@@ -7,17 +7,8 @@ import "google/protobuf/any.proto";
 option csharp_namespace = "LiteDB.Server.Base.Protos";
 
 message Command {
-  string path = 1;
-  CommandOperation operation = 2;
+  string command = 1;
   optional google.protobuf.Any data = 3;
 }
 
 message CommandResult {}
-
-enum CommandOperation {
-  COMMAND_OPERATION_UNSPECIFIED = 0;
-  COMMAND_OPERATION_READ = 1;
-  COMMAND_OPERATION_WRITE = 2;
-  COMMAND_OPERATION_CREATE = 3;
-  COMMAND_OPERATION_UPDATE = 4;
-}

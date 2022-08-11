@@ -1,6 +1,6 @@
-﻿using LiteDB;
-using LiteDB.Engine;
-using LiteDB.Server.Base;
+﻿using LiteDB.Server.Base;
+using LiteDB.Server.Base.Protos;
+using LiteDB.Server.Handlers.Collections;
 
 namespace LiteDB.Server
 {
@@ -8,12 +8,17 @@ namespace LiteDB.Server
     {
         public static void Main(string[] args)
         {
-            var parser = new RouteParser("/account/{version}/{userId}");
-            var info = parser.ParseRouteInstance("/account/v1/1231564");
-            foreach(var pair in info)
+            var server = new Server(9999, new List<PathHandler>
             {
-                Console.WriteLine($"Key: {pair.Key} Value: {pair.Value}");
-            }
+                new PathHandler("collections/{collectionName}", new CreateCollectionHandler())
+            });
+
+            server.Run().Wait();
+        }
+
+        public static CommandResult TestResult(CommandContext context)
+        {
+            return new();
         }
     }
 }

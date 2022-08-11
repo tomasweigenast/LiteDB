@@ -2,7 +2,7 @@
 
 namespace LiteDB.Server.Base
 {
-    public class RouteParser
+    public class RouteDefinition
     {
         private const string RouteTokenPattern = @"[{0}].+?[{1}]"; //the 0 and 1 are used by the string.format function, they are the start and end characters.
         private const string VariableTokenPattern = "(?<{0}>[^,]*)"; //the <>'s denote the group name; this is used for reference for the variables later.
@@ -10,9 +10,6 @@ namespace LiteDB.Server.Base
         /// <summary>
         /// This is the route template that values are extracted based on.
         /// </summary>
-        /// <value>
-        /// A string containing variables denoted by the <c>VariableStartChar</c> and the <c>VariableEndChar</c>
-        /// </value>
         public string RouteFormat { get; }
 
         /// <summary>
@@ -20,7 +17,7 @@ namespace LiteDB.Server.Base
         /// </summary>
         public HashSet<string> Variables { get; }
 
-        public RouteParser(string route)
+        public RouteDefinition(string route)
         {
             RouteFormat = route;
 
@@ -38,7 +35,7 @@ namespace LiteDB.Server.Base
         /// </summary>
         /// <param name="routeInstance">The route instance.</param>
         /// <returns>A dictionary of Variable names mapped to values.</returns>
-        public IEnumerable<KeyValuePair<string, string>> ParseRouteInstance(string routeInstance)
+        public IEnumerable<KeyValuePair<string, string>>? ParseRouteInstance(string routeInstance)
         {
             var inputValues = new Dictionary<string, string>();
             var formatUrl = new string(RouteFormat.ToArray());
@@ -47,6 +44,9 @@ namespace LiteDB.Server.Base
 
             var regex = new Regex(formatUrl, RegexOptions.IgnoreCase);
             var matchCollection = regex.Match(routeInstance);
+
+            if (!matchCollection.Success)
+                return null;
 
             foreach (var variable in Variables)
             {
@@ -72,5 +72,9 @@ namespace LiteDB.Server.Base
         private static string WrapWithVariableChars(string input) => $"{{{input}}}";
 
         #endregion
+
+        public static implicit operator RouteDefinition(string route) => new(route);
+
+        public override string ToString() => RouteFormat;
     }
 }

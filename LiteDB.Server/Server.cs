@@ -1,14 +1,35 @@
 ﻿using LiteDB.Server.Base;
+using LiteDB.Server.Base.Protos;
+using LiteDB.Server.Logging;
 using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
+using System.Reflection;
+using WellKnown = Google.Protobuf.WellKnownTypes;
 
 namespace LiteDB.Server
 {
+    /// <summary>
+    /// Contains the definition to create a LiteDB Server.
+    /// 
+    /// After connecting, how to send a command:
+    /// resource-name:[parameter1,parameter2,parameter3]:command-name
+    /// 
+    /// Command names:
+    /// - create
+    /// - delete
+    /// - read
+    /// - write
+    /// - update
+    /// </summary>
     public class Server
     {
+        private static readonly MethodInfo m_AnyUnpackMethod = typeof(WellKnown.Any).GetMethod("Unpack")!;
+        private static readonly MethodInfo m_HandleDatalessMethod = typeof(CommandHandler).GetMethod("Handle")!;
+        private static readonly MethodInfo m_HandleDataMethod = typeof(CommandHandler<>).GetMethod("Handle")!;
+
         private readonly TcpListener m_Listener;
-        private readonly ConcurrentDictionary<string, TcpClient> m_Clients;
+        private readonly ConcurrentDictionary<string, Client> m_Clients;
         private readonly ConcurrentDictionary<string, PathHandler> m_PathHandlers;
 
         private Task? _startTask;
@@ -18,17 +39,22 @@ namespace LiteDB.Server
         public Server(int port, List<PathHandler> handlers)
         {
             m_Listener = new TcpListener(IPAddress.Parse("127.0.0.1"), port);
-            m_Clients = new ConcurrentDictionary<string, TcpClient>();
-            m_PathHandlers = new ConcurrentDictionary<string, PathHandler>(handlers.Select(x => KeyValuePair.Create(x.Path, x)));
+            m_Clients = new ConcurrentDictionary<string, Client>();
+            m_PathHandlers = new ConcurrentDictionary<string, PathHandler>(handlers.Select(x => KeyValuePair.Create(x.Path.ToString(), x)));
         }
+
+        #region Methods
 
         /// <summary>
         /// Starts the server and wait for incoming requests
         /// </summary>
-        public async Task Run()
+        public Task Run()
         {
             if (m_IsRunning)
-                return;
+                return _startTask!;
+
+            Logger.Log("Starting server...");
+            Logger.Log($"Loaded {m_PathHandlers.Count} handler(s).");
 
             m_IsRunning = true;
             m_Listener.Start();
@@ -36,22 +62,9 @@ namespace LiteDB.Server
             m_ListenerCancellationTokenSource = new();
             _startTask = Task.Run(() => AcceptConnections(), m_ListenerCancellationTokenSource.Token);
 
-            // Reading buffer
-            var buffer = new byte[512];
+            Logger.Log("Server started and listening for connections...");
 
-            // Start listening for clients
-            while (true)
-            {
-                var client = await m_Listener.AcceptTcpClientAsync().ConfigureAwait(false);
-                var stream = client.GetStream();
-
-                // Read message
-                int i;
-                while((i = stream.Read(buffer, 0, buffer.Length)) != 0)
-                {
-
-                }
-            }
+            return _startTask;
         }
 
         /// <summary>
@@ -59,7 +72,7 @@ namespace LiteDB.Server
         /// </summary>
         public async Task Stop()
         {
-            if(_startTask != null) await _startTask;
+            if (_startTask != null) await _startTask;
 
             foreach (var client in m_Clients)
                 client.Value.Close();
@@ -69,33 +82,94 @@ namespace LiteDB.Server
             m_Clients.Clear();
             m_Listener.Stop();
             m_IsRunning = false;
-        }
+        } 
+        
+        #endregion
 
         #region Private Methods
+
+        private void OnDataReady(Client _, byte[] buffer)
+        {
+            var cmd = Command.Parser.ParseFrom(buffer);
+            ICommandHandler? commandHandler = null;
+            CommandContext? context = null;
+
+            foreach(var handler in m_PathHandlers.Values)
+            {
+                var parameters = handler.Path.ParseRouteInstance(cmd.Path);
+                if (parameters == null)
+                    continue;
+
+                commandHandler = handler.Handler;
+                context = new CommandContext(cmd, parameters.ToDictionary(x => x.Key, x => x.Value));
+                Logger.Log($"Handler found for path {cmd.Path}. Parameters: [{string.Join(",", parameters.Select(b => $"{b.Key}: ${b.Value}"))}]");
+            }
+
+            if (commandHandler == null)
+                throw new Exception("Unknown path: " + cmd.Path);
+
+            var commandHandlerType = commandHandler.GetType();
+
+            // Skips data
+            if (!commandHandlerType.ContainsGenericParameters)
+            {
+                // Call handler
+                var commandResult = m_HandleDatalessMethod.Invoke(commandHandler, new object[] { context! });
+            }
+
+            // Needs data
+            else
+            {
+                var dataType = commandHandlerType.GenericTypeArguments[0]!;
+
+                if (cmd!.Data == null)
+                    throw new Exception("Expected data, received null.");
+
+                var unpackMethod = m_AnyUnpackMethod.MakeGenericMethod(new Type[] {dataType});
+
+                try
+                {
+                    // Unpack data to given type
+                    var unpackedData = unpackMethod.Invoke(cmd.Data, null)!;
+
+                    // Call handler
+                    var commandResult = m_HandleDataMethod.Invoke(commandHandler, new object[] { context!, unpackedData });
+                }
+                catch(Exception ex)
+                {
+                    throw new Exception($"Expected data be of type {dataType.Name}, given object with TypeUrl: {cmd.Data.TypeUrl}", ex);
+                }
+            }
+        }
 
         private async Task AcceptConnections()
         {
             while (!m_ListenerCancellationTokenSource!.IsCancellationRequested)
             {
                 TcpClient tcpClient = await m_Listener.AcceptTcpClientAsync().ConfigureAwait(false);
-                string clientIp = tcpClient.Client.RemoteEndPoint!.ToString()!;
+                var client = new Client(tcpClient);
 
-                m_Clients.TryAdd(clientIp, tcpClient);
-
-                Task unawaited = Task.Run(() => DataReceiver(tcpClient), m_ListenerCancellationTokenSource.Token);
+                bool added = m_Clients.TryAdd(client.Id, client);
+                if(added)
+                {
+                    Logger.Log($"Client {client.Ip} connected. Id [{client.Id}]");
+                    Task unawaited = Task.Run(() => DataReceiver(client), m_ListenerCancellationTokenSource.Token);
+                }
             }
         }
 
-        private async Task DataReceiver(TcpClient client)
+        private async Task DataReceiver(Client client)
         {
             while(true)
             {
                 try
                 {
-                    if (!IsClientConnected(client))
+                    if (!client.Connected)
                         break;
 
                     // TODO: Handle cancellation token
+
+                    Logger.Log($"Reading incoming message from client {client.Id}");
 
                     // Read buffer
                     var buffer = await ReadBuffer(client, m_ListenerCancellationTokenSource!.Token);
@@ -104,6 +178,8 @@ namespace LiteDB.Server
                         await Task.Delay(10, m_ListenerCancellationTokenSource!.Token).ConfigureAwait(false);
                         continue;
                     }
+
+                    _ = Task.Run(() => OnDataReady(client, buffer));
                 }
                 catch
                 {
@@ -112,7 +188,7 @@ namespace LiteDB.Server
             }
         }
 
-        private static async Task<byte[]> ReadBuffer(TcpClient client, CancellationToken cancellationToken)
+        private static async Task<byte[]> ReadBuffer(Client client, CancellationToken cancellationToken)
         {
             byte[] buffer = new byte[2048];
             int read;
@@ -120,7 +196,7 @@ namespace LiteDB.Server
             using MemoryStream ms = new();
             while (true)
             {
-                read = await client.GetStream().ReadAsync(buffer, cancellationToken).ConfigureAwait(false);
+                read = await client.ReadStream.ReadAsync(buffer, cancellationToken).ConfigureAwait(false);
 
                 if (read > 0)
                 {
@@ -130,23 +206,6 @@ namespace LiteDB.Server
                 else
                     throw new SocketException();
             }
-        }
-
-        private static bool IsClientConnected(TcpClient client)
-        {
-            if (!client.Connected)
-                return false;
-
-            if (client.Client.Poll(0, SelectMode.SelectWrite) && (!client.Client.Poll(0, SelectMode.SelectError)))
-            {
-                byte[] buffer = new byte[1];
-                if (client.Client.Receive(buffer, SocketFlags.Peek) == 0)
-                    return false;
-
-                return true;
-            }
-            else
-                return false;
         }
 
         #endregion
