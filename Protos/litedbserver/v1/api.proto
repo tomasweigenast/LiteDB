@@ -7,8 +7,15 @@ import "google/protobuf/any.proto";
 option csharp_namespace = "LiteDB.Server.Base.Protos";
 
 message Command {
-  string command = 1;
+  string path = 1;
   optional google.protobuf.Any data = 3;
 }
 
-message CommandResult {}
+message CommandResult {
+  bool success = 1;
+  string error_code = 2;
+}
+
+message Collection {
+  string name = 1;
+}

@@ -18,7 +18,7 @@ namespace LiteDB.Tests.Engine
 
             var s = new EngineSettings
             {
-                DataStream = new MemoryStream()
+                DataStream = new MemoryStream(),
             };
 
             var names = new string[] { "Ze", "Ana", "Ána", "Ánã", "Ana Paula", "ana lucia" };

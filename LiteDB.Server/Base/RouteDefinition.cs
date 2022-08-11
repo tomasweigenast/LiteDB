@@ -35,8 +35,15 @@ namespace LiteDB.Server.Base
         /// </summary>
         /// <param name="routeInstance">The route instance.</param>
         /// <returns>A dictionary of Variable names mapped to values.</returns>
-        public IEnumerable<KeyValuePair<string, string>>? ParseRouteInstance(string routeInstance)
+        public RouteParseResult? ParseRouteInstance(string routeInstance)
         {
+            var parts = routeInstance.Split(':', 2, StringSplitOptions.TrimEntries);
+            if (parts.Length != 2)
+                return null;
+            
+            var command = parts[1];
+            routeInstance = parts[0];
+            
             var inputValues = new Dictionary<string, string>();
             var formatUrl = new string(RouteFormat.ToArray());
             foreach (var variable in Variables)
@@ -51,10 +58,13 @@ namespace LiteDB.Server.Base
             foreach (var variable in Variables)
             {
                 var value = matchCollection.Groups[variable].Value;
+                if (string.IsNullOrWhiteSpace(value))
+                    return null;
+
                 inputValues.Add(variable, value);
             }
 
-            return inputValues;
+            return new RouteParseResult(inputValues, command);
         }
         
         #region Private Helper Methods
@@ -76,5 +86,18 @@ namespace LiteDB.Server.Base
         public static implicit operator RouteDefinition(string route) => new(route);
 
         public override string ToString() => RouteFormat;
+    }
+
+    public class RouteParseResult
+    {
+        public Dictionary<string, string> Parameters { get; }
+
+        public string Command { get; }
+
+        public RouteParseResult(Dictionary<string, string> parameters, string command)
+        {
+            Command = command;
+            Parameters = parameters;
+        }
     }
 }

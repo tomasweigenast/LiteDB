@@ -5,6 +5,7 @@ namespace LiteDB.Server.Base
     public class Client
     {
         private readonly TcpClient m_TcpClient;
+        private readonly SemaphoreSlim m_SendLock = new(1, 1);
 
         public string Id { get; init; }
 
@@ -14,7 +15,9 @@ namespace LiteDB.Server.Base
 
         public Socket Socket => m_TcpClient.Client;
 
-        public Stream ReadStream => m_TcpClient.GetStream();
+        public Stream NetworkStream => m_TcpClient.GetStream();
+
+        public SemaphoreSlim SendLock => m_SendLock;
 
         public Client(TcpClient client)
         {
