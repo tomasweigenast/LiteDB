@@ -11,12 +11,12 @@ namespace LiteDB.Tests.Server
         public void Parse_command()
         {
             RouteDefinition template = "collection/{collectionName}/indexes/{indexName}";
-            string commandPath = "collection/users/indexes/Idx_Name:delete";
+            string commandPath = "collection/users/indexes/Idx_Name:create";
 
             var result = template.ParseRouteInstance(commandPath);
             
             result.Should().NotBeNull();
-            result.Command.Should().Be("delete");
+            result.Operation.Should().Be(Operation.Create);
             result.Parameters.Should().Contain(new Dictionary<string, string>
             {
                 { "collectionName", "users" },
@@ -28,7 +28,7 @@ namespace LiteDB.Tests.Server
         public void Parse_command_invalid()
         {
             RouteDefinition template = "collection/{collectionName}/indexes/{indexName}";
-            string commandPath = "collection/users/indexes/:delete";
+            string commandPath = "collection/users/indexes/:create";
 
             var result = template.ParseRouteInstance(commandPath);
 

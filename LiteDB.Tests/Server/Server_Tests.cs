@@ -26,9 +26,12 @@ namespace LiteDB.Tests.Server
         {
             var exception = Record.Exception(() =>
             {
-                var server = new LiteDB.Server.Server(9999, new List<PathHandler>
+                var server = new LiteDB.Server.Server(9999, new List<PathHandlerBuilder>
                 {
-                    new PathHandler("collections/{collectionName}", new DataCommandHandler())
+                    new PathHandlerBuilder("collections/{collectionName}", new Dictionary<Operation, ICommandHandler>
+                    {
+                        { Operation.Create, new DataCommandHandler() }
+                    })
                 });
 
                 server.Run();
