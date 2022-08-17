@@ -15,7 +15,7 @@ namespace LiteDB.Server
                 })
             });
 
-            server.Run().Wait();
+            server.RunAsync().Wait();
         }
     }
 }
