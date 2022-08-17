@@ -16,13 +16,15 @@
         public static readonly Operation Read = new("read");
         private static readonly Dictionary<string, Operation> m_Operations = new()
         {
-            { "create", Create }
+            { "create", Create },
+            { "delete", Delete },
+            { "write", Write },
+            { "update", Update },
+            { "read", Read },
         };
 
         public static Operation Parse(string operation)
-        {
-
-        }
+            => m_Operations[operation];
 
         public override string ToString() => m_Name;
     }

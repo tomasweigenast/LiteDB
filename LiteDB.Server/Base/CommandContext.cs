@@ -18,14 +18,10 @@ namespace LiteDB.Server.Base
         private readonly Command m_Command;
         private readonly Dictionary<string, string> m_Parameters;
 
-        public string CommandName { get; }
-
-        public CommandContext(Command command, string commandName, Dictionary<string, string> parameters)
+        public CommandContext(Command command, Dictionary<string, string> parameters)
         {
             m_Command = command;
             m_Parameters = parameters;
-
-            CommandName = commandName;
         }
 
         public T GetParameterValue<T>(string parameterName) where T : class, IComparable

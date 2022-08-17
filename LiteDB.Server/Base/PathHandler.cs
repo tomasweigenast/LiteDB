@@ -22,7 +22,7 @@ namespace LiteDB.Server.Base
             m_Handler = handler;
             m_HandlerType = handler.GetType();
             m_HandlerHandleMethod = m_HandlerType.GetMethod("Handle")!;
-            DataType = m_HandlerType.BaseType!.GenericTypeArguments[0];
+            try { DataType = m_HandlerType.BaseType!.GenericTypeArguments[0]; } catch { }
         }
 
         public CommandResult Handle(params object[] arguments)

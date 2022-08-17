@@ -123,23 +123,23 @@ namespace LiteDB.Server
                 if (result == null)
                     continue;
 
-                handlerExecutor = result.Command;
-                context = new CommandContext(cmd, result.Command, result.Parameters.ToDictionary(x => x.Key, x => x.Value));
+                handlerExecutor = handlerEntry.Value[result.Operation];
+                context = new CommandContext(cmd, result.Parameters.ToDictionary(x => x.Key, x => x.Value));
                 Logger.Log($"Handler found for path {cmd.Path}. Parameters: [{string.Join(",", result.Parameters.Select(b => $"{b.Key}: ${b.Value}"))}]");
             }
 
-            if (pathHandler == null)
+            if (handlerExecutor == null)
                 throw new Exception("Unknown path: " + cmd.Path);
 
             CommandResult commandResult;
 
             // Needs data
-            if (pathHandler.NeedsData)
+            if (handlerExecutor.NeedsData)
             {
                 if (cmd!.Data == null)
                     throw new Exception("Expected data, received null.");
 
-                var unpackMethod = m_AnyUnpackMethod.MakeGenericMethod(new Type[] { pathHandler.DataType! });
+                var unpackMethod = m_AnyUnpackMethod.MakeGenericMethod(new Type[] { handlerExecutor.DataType! });
 
                 try
                 {
@@ -147,11 +147,11 @@ namespace LiteDB.Server
                     var unpackedData = unpackMethod.Invoke(cmd.Data, null)!;
 
                     // Call handler
-                    commandResult = pathHandler.Handle(context!, unpackedData);
+                    commandResult = handlerExecutor.Handle(context!, unpackedData);
                 }
                 catch (Exception ex)
                 {
-                    throw new Exception($"Expected data be of type {pathHandler.DataType!.Name}, given object with TypeUrl: {cmd.Data.TypeUrl}", ex);
+                    throw new Exception($"Expected data be of type {handlerExecutor.DataType!.Name}, given object with TypeUrl: {cmd.Data.TypeUrl}", ex);
                 }
             }
 
@@ -159,7 +159,7 @@ namespace LiteDB.Server
             else
             {
                 // Call handler
-                commandResult = pathHandler.Handle(context!);
+                commandResult = handlerExecutor.Handle(context!);
             }
 
             // Send response

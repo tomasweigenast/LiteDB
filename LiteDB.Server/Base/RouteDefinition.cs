@@ -1,5 +1,4 @@
-﻿using LiteDB.Server.Base.Protos;
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 
 namespace LiteDB.Server.Base
 {
